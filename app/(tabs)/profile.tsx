@@ -1,22 +1,30 @@
 import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
-import { auth } from "@/config/firebase";
 import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import { useAuth } from "@/contexts/authContext";
-import { getProfileImage } from "@/services/imageService";
 import { accountOptionType } from "@/types";
 import { verticalScale } from "@/utils/styling";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { signOut } from "firebase/auth";
 import * as Icons from "phosphor-react-native";
-import React from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import React, { useCallback } from "react";
+import {
+  Alert,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+const getProfileImage = (file: any) => {
+  if (file && typeof file === "string") return { uri: file };
+  if (file && typeof file === "object" && file.uri) return { uri: file.uri };
+  return require("@/assets/images/defaultAvatar.png");
+};
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   const accountOptions: accountOptionType[] = [
@@ -46,29 +54,31 @@ const Profile = () => {
     },
   ];
 
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
+  const handleLogout = useCallback(async () => {
+    await logout();
+  }, [logout]);
 
-  const showLogoutAlert = () => {
+  const showLogoutAlert = useCallback(() => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       {
         text: "Cancel",
         onPress: () => console.log("cancel logout"),
         style: "cancel",
       },
-      { text: "Logout", onPress: () => handleLogout(), style: "destructive" },
+      { text: "Logout", onPress: handleLogout, style: "destructive" },
     ]);
-  };
+  }, [handleLogout]);
 
-  const handlePress = (item: accountOptionType) => {
-    if (item.title === "Logout") {
-      showLogoutAlert();
-    }
-    if (item.routeName) {
-      router.push(item.routeName);
-    }
-  };
+  const handlePress = useCallback(
+    (item: accountOptionType) => {
+      if (item.title === "Logout") {
+        showLogoutAlert();
+      } else if (item.routeName) {
+        router.push(item.routeName);
+      }
+    },
+    [router, showLogoutAlert]
+  );
 
   return (
     <ScreenWrapper>
@@ -100,38 +110,33 @@ const Profile = () => {
 
         {/* account options */}
         <View style={styles.accountOptions}>
-          {accountOptions.map((item, index) => {
-            return (
-              <Animated.View
-                entering={FadeInDown.delay(index * 50)}
-                key={index}
+          <FlatList
+            data={accountOptions}
+            keyExtractor={(item) => item.title}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                onPress={() => handlePress(item)}
                 style={styles.listItem}
               >
-                <TouchableOpacity
-                  onPress={() => handlePress(item)}
-                  style={styles.flexRow}
+                <View
+                  style={[
+                    styles.listIcon,
+                    { backgroundColor: item?.bgColor },
+                  ]}
                 >
-                  <View
-                    style={[
-                      styles.listIcon,
-                      { backgroundColor: item?.bgColor },
-                    ]}
-                  >
-                    {item.icon && item.icon}
-                  </View>
-                  <Typo size={16} style={{ flex: 1 }} fontWeight={"500"}>
-                    {" "}
-                    {item.title}
-                  </Typo>
-                  <Icons.CaretRight
-                    size={verticalScale(20)}
-                    color={colors.white}
-                    weight="fill"
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
+                  {item.icon}
+                </View>
+                <Typo size={16} style={{ flex: 1 }} fontWeight={"500"}>
+                  {item.title}
+                </Typo>
+                <Icons.CaretRight
+                  size={verticalScale(20)}
+                  color={colors.white}
+                  weight="fill"
+                />
+              </TouchableOpacity>
+            )}
+          />
         </View>
       </View>
     </ScreenWrapper>
@@ -150,29 +155,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacingY._15,
   },
-  avatarContainer: {
-    position: "relative",
-    alignSelf: "center",
-  },
   avatar: {
     alignSelf: "center",
     backgroundColor: colors.neutral300,
     width: verticalScale(135),
     height: verticalScale(135),
     borderRadius: 200,
-  },
-  editIcon: {
-    position: "absolute",
-    bottom: 5,
-    right: 8,
-    borderRadius: 50,
-    backgroundColor: colors.neutral100,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
-    padding: 5,
   },
   nameContainer: {
     gap: verticalScale(4),
@@ -188,14 +176,12 @@ const styles = StyleSheet.create({
     borderCurve: "continuous",
   },
   listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacingX._10,
     marginBottom: verticalScale(17),
   },
   accountOptions: {
     marginTop: spacingY._35,
-  },
-  flexRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacingX._10,
   },
 });

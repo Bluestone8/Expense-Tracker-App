@@ -3,20 +3,30 @@ import { InputProps } from "@/types";
 import { verticalScale } from "@/utils/styling";
 import React from "react";
 import { StyleSheet, TextInput, View } from "react-native";
+import Typo from "./Typo";
 
 const Input = (props: InputProps) => {
+  const { label, error, containerStyle, ...rest } = props;
   return (
-    <View
-      style={[styles.container, props.containerStyle && props.containerStyle]}
-    >
-      {props.icon && props.icon}
-      <TextInput
-        style={[styles.input, props.inputStyle]}
-        placeholder={props.placeholder}
-        placeholderTextColor={colors.neutral400}
-        ref={props.inputRef && props.inputRef}
-        {...props}
-      />
+    <View style={styles.mainContainer}>
+      {label && <Typo style={styles.label}>{label}</Typo>}
+      <View
+        style={[
+          styles.inputContainer,
+          containerStyle,
+          error && styles.errorContainer,
+        ]}
+      >
+        {props.icon && props.icon}
+        <TextInput
+          style={[styles.input, props.inputStyle]}
+          placeholder={props.placeholder}
+          placeholderTextColor={colors.neutral400}
+          ref={props.inputRef && props.inputRef}
+          {...rest}
+        />
+      </View>
+      {error && <Typo style={styles.errorText}>{error}</Typo>}
     </View>
   );
 };
@@ -24,7 +34,10 @@ const Input = (props: InputProps) => {
 export default Input;
 
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
+    gap: spacingX._8,
+  },
+  inputContainer: {
     flexDirection: "row",
     height: verticalScale(54),
     alignItems: "center",
@@ -40,5 +53,16 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.white,
     fontSize: verticalScale(14),
+  },
+  label: {
+    color: colors.neutral300,
+    fontSize: verticalScale(12),
+  },
+  errorContainer: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: verticalScale(12),
   },
 });

@@ -1,21 +1,16 @@
 import { colors, radius, spacingX } from "@/constants/theme";
-import { WalletType } from "@/types";
+import { WalletListItemProps } from "@/types";
 import { verticalScale } from "@/utils/styling";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import * as Icons from "phosphor-react-native";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Typo from "./Typo";
-const WalletListItem = ({
-  item,
-  index,
-  router,
-}: {
-  item: WalletType;
-  index: number;
-  router: any;
-}) => {
+
+const WalletListItem = ({ item, index }: WalletListItemProps) => {
+  const router = useRouter();
   const openWallet = () => {
     router.push({
       pathname: "/walletModal",

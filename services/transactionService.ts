@@ -4,72 +4,67 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { uploadFileToCloudinary } from "./imageService";
+import { uploadFile } from "./storageService";
 
 export const createOrUpdateTransaction = async (
   transactionData: Partial<TransactionType>
 ): Promise<ResponseType> => {
-  try {
-    if (transactionData.image) {
-      const imageResponse = await uploadFileToCloudinary(
-        transactionData.image,
-        "transactions"
-      );
-      if (!imageResponse.success) {
-        return { success: false, msg: "Failed to upload transaction image" };
-      }
-      transactionData.image = imageResponse.data;
-    }
-
-    const transactionRef = transactionData.id
-      ? doc(firestore, "transactions", transactionData.id)
-      : doc(collection(firestore, "transactions"));
-
-    await setDoc(transactionRef, transactionData, { merge: true });
-
-    // update wallet balance
-    const walletRef = doc(firestore, "wallets", transactionData.walletId!);
-    const walletData = (await walletRef.get()).data();
-    if (walletData) {
-      let newAmount = walletData.amount;
-      if (transactionData.type === "income") {
-        newAmount += transactionData.amount;
-      } else {
-        newAmount -= transactionData.amount;
-      }
-      await updateDoc(walletRef, { amount: newAmount });
-    }
-
-    return { success: true, data: { ...transactionData, id: transactionRef.id } };
-  } catch (error: any) {
-    return { success: false, msg: error.message };
+  if (transactionData.image) {
+    const imageUrl = await uploadFile(
+      transactionData.image as string,
+      `transactions/${transactionData.walletId}/${Date.now()}`
+    );
+    transactionData.image = imageUrl;
   }
+
+  const transactionRef = transactionData.id
+    ? doc(firestore, "transactions", transactionData.id)
+    : doc(collection(firestore, "transactions"));
+
+  await setDoc(transactionRef, transactionData, { merge: true });
+
+  // update wallet balance
+  const walletRef = doc(firestore, "wallets", transactionData.walletId!);
+  const walletSnap = await getDoc(walletRef);
+  const walletData = walletSnap.data();
+  if (walletData) {
+    let newAmount = walletData.amount;
+    if (transactionData.type === "income") {
+      newAmount += transactionData.amount;
+    } else {
+      newAmount -= transactionData.amount;
+    }
+    await updateDoc(walletRef, { amount: newAmount });
+  }
+
+  return {
+    success: true,
+    data: { ...transactionData, id: transactionRef.id },
+  };
 };
 
 export const deleteTransaction = async (
   transaction: TransactionType
 ): Promise<ResponseType> => {
-  try {
-    const transactionRef = doc(firestore, "transactions", transaction.id!);
-    await deleteDoc(transactionRef);
+  const transactionRef = doc(firestore, "transactions", transaction.id!);
+  await deleteDoc(transactionRef);
 
-    // update wallet balance
-    const walletRef = doc(firestore, "wallets", transaction.walletId!);
-    const walletData = (await walletRef.get()).data();
-    if (walletData) {
-      let newAmount = walletData.amount;
-      if (transaction.type === "income") {
-        newAmount -= transaction.amount;
-      } else {
-        newAmount += transaction.amount;
-      }
-      await updateDoc(walletRef, { amount: newAmount });
+  // update wallet balance
+  const walletRef = doc(firestore, "wallets", transaction.walletId!);
+  const walletSnap = await getDoc(walletRef);
+  const walletData = walletSnap.data();
+  if (walletData) {
+    let newAmount = walletData.amount;
+    if (transaction.type === "income") {
+      newAmount -= transaction.amount;
+    } else {
+      newAmount += transaction.amount;
     }
-    return { success: true, msg: "Transaction deleted successfully" };
-  } catch (error: any) {
-    return { success: false, msg: error.message };
+    await updateDoc(walletRef, { amount: newAmount });
   }
+  return { success: true, msg: "Transaction deleted successfully" };
 };

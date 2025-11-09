@@ -3,24 +3,61 @@ import HomeCard from "@/components/HomeCard";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import TransactionList from "@/components/TransactionList";
 import Typo from "@/components/Typo";
+import useFetchData from "@/components/useFetchData";
 import { colors, spacingX, spacingY } from "@/constants/theme";
 import { useAuth } from "@/contexts/authContext";
+import { TransactionType, WalletType } from "@/types";
 import { verticalScale } from "@/utils/styling";
 import { useRouter } from "expo-router";
+import { where } from "firebase/firestore";
 import * as Icons from "phosphor-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
 const Home = () => {
   const { user } = useAuth();
   const router = useRouter();
-  // console.log("user", user);
 
-  // const { logout } = useAuth();
+  const {
+    data: wallets,
+    loading: walletsLoading,
+    error: walletsError,
+  } = useFetchData<WalletType>("wallets", [where("uid", "==", user?.uid)]);
 
-  // const handleLogout = async () => {
-  //   await signOut(auth);
-  // };
+  const {
+    data: transactions,
+    loading: transactionsLoading,
+    error: transactionsError,
+  } = useFetchData<TransactionType>("transactions", [
+    where("uid", "==", user?.uid),
+  ]);
+
+  const { totalBalance, totalIncome, totalExpenses } = useMemo(() => {
+    let totalBalance = 0;
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    wallets.forEach((wallet) => {
+      totalBalance += wallet.amount || 0;
+    });
+
+    transactions.forEach((transaction) => {
+      if (transaction.type === "income") {
+        totalIncome += transaction.amount;
+      } else {
+        totalExpenses += transaction.amount;
+      }
+    });
+
+    return { totalBalance, totalIncome, totalExpenses };
+  }, [wallets, transactions]);
+
+  const handleTransactionPress = (item: TransactionType) => {
+    router.push({
+      pathname: "/(modals)/transactionModal",
+      params: { ...item, date: item.date.toString() },
+    });
+  };
 
   return (
     <ScreenWrapper>
@@ -50,14 +87,19 @@ const Home = () => {
           showsVerticalScrollIndicator={false}
         >
           <View>
-            <HomeCard />
+            <HomeCard
+              totalBalance={totalBalance}
+              income={totalIncome}
+              expense={totalExpenses}
+            />
           </View>
 
           <TransactionList
             title="Recent Transactions"
-            data={[]}
-            loading={false}
+            data={transactions}
+            loading={transactionsLoading}
             emptyListMessage="No transactions found"
+            handleClick={handleTransactionPress}
           />
         </ScrollView>
 

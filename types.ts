@@ -10,9 +10,21 @@ import {
   ViewStyle,
 } from "react-native";
 
+import {
+  StatusBarStyle,
+  TextInput,
+  TextInputProps,
+  TextProps,
+  TextStyle,
+  TouchableOpacityProps,
+  ViewStyle,
+} from "react-native";
+
 export type ScreenWrapperProps = {
   style?: ViewStyle;
   children: React.ReactNode;
+  backgroundColor?: string;
+  barStyle?: StatusBarStyle;
 };
 export type ModalWrapperProps = {
   style?: ViewStyle;
@@ -30,7 +42,7 @@ export type TypoProps = {
   size?: number;
   color?: string;
   fontWeight?: TextStyle["fontWeight"];
-  children: any | null;
+  children: React.ReactNode;
   style?: TextStyle;
   textProps?: TextProps;
 };
@@ -90,6 +102,7 @@ export type TransactionListType = {
   title?: string;
   loading?: boolean;
   emptyListMessage?: string;
+  handleClick: (item: TransactionType) => void;
 };
 
 export type TransactionItemProps = {
@@ -103,15 +116,18 @@ export interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
   inputStyle?: TextStyle;
   inputRef?: React.RefObject<TextInput>;
-  //   label?: string;
-  //   error?: string;
+  label?: string;
+  error?: string;
 }
 
 export interface CustomButtonProps extends TouchableOpacityProps {
   style?: ViewStyle;
   onPress?: () => void;
   loading?: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  title?: string;
+  disabled?: boolean;
+  loadingColor?: string;
 }
 
 export type ImageUploadProps = {
@@ -166,4 +182,15 @@ export type WalletType = {
   image: any;
   uid?: string;
   createdAt?: Date;
+};
+
+export type WalletListItemProps = {
+  item: WalletType;
+  index: number;
+};
+
+export type HomeCardProps = {
+  totalBalance: number;
+  income: number;
+  expense: number;
 };

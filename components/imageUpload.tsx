@@ -1,13 +1,18 @@
 import { colors, radius } from "@/constants/theme";
-import { getFilePath } from "@/services/imageService";
 import { ImageUploadProps } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Icons from "phosphor-react-native";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import Typo from "./Typo";
+
+const getFilePath = (file: any) => {
+  if (file && typeof file === "string") return { uri: file };
+  if (file && typeof file === "object" && file.uri) return { uri: file.uri };
+  return require("@/assets/images/defaultAvatar.png");
+};
 
 const ImageUpload = ({
   file = null,
@@ -18,15 +23,29 @@ const ImageUpload = ({
   placeholder = "Upload Image",
 }: ImageUploadProps) => {
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5,
-    });
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission required",
+          "Please grant permission to access the photo library."
+        );
+        return;
+      }
 
-    if (!result.canceled) {
-      onSelect(result.assets[0].uri);
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        onSelect(result.assets[0]);
+      }
+    } catch (error) {
+      console.error("Error picking image: ", error);
+      Alert.alert("Error", "An error occurred while picking the image.");
     }
   };
 
@@ -35,14 +54,14 @@ const ImageUpload = ({
       {!file && (
         <TouchableOpacity
           onPress={pickImage}
-          style={[styles.inputContainer, containerStyle && containerStyle]}
+          style={[styles.inputContainer, containerStyle]}
         >
           <Icons.UploadSimple color={colors.neutral200} />
           {placeholder && <Typo size={15}>{placeholder}</Typo>}
         </TouchableOpacity>
       )}
       {file && (
-        <View style={[styles.image, imageStyle && imageStyle]}>
+        <View style={[styles.image, imageStyle]}>
           <Image
             style={{ flex: 1 }}
             source={getFilePath(file)}

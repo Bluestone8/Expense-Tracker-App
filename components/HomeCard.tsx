@@ -1,11 +1,12 @@
 import { colors, spacingX, spacingY } from "@/constants/theme";
+import { HomeCardProps } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import * as Icons from "phosphor-react-native";
 import React from "react";
 import { ImageBackground, StyleSheet, View } from "react-native";
 import Typo from "./Typo";
 
-const HomeCard = () => {
+const HomeCard = ({ totalBalance, income, expense }: HomeCardProps) => {
   return (
     <ImageBackground
       source={require("../assets/images/card.png")}
@@ -26,7 +27,7 @@ const HomeCard = () => {
             />
           </View>
           <Typo color={colors.black} size={30} fontWeight={"bold"}>
-            $100,000.00
+            ${totalBalance.toFixed(2)}
           </Typo>
         </View>
         {/* total expenses and income */}
@@ -51,7 +52,7 @@ const HomeCard = () => {
               </Typo>
             </View>
             <Typo size={17} color={colors.green} fontWeight={"600"}>
-              $ 2342
+              $ {income.toFixed(2)}
             </Typo>
           </View>
 
@@ -75,7 +76,7 @@ const HomeCard = () => {
               </Typo>
             </View>
             <Typo size={17} color={colors.rose} fontWeight={"600"}>
-              $ 1221
+              $ {expense.toFixed(2)}
             </Typo>
           </View>
         </View>

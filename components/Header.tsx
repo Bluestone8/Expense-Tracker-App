@@ -1,22 +1,20 @@
-import { spacingX, spacingY } from "@/constants/theme";
 import { HeaderProps } from "@/types";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import Typo from "./Typo";
 
-const Header = ({ title = "", leftIcon, style }: HeaderProps) => {
+const Header = ({ title = "", leftIcon, rightIcon, style }: HeaderProps) => {
   return (
     <View style={[styles.container, style]}>
-      {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
-      {title && (
-        <Typo
-          size={22}
-          fontWeight="600"
-          style={{ textAlign: "center", width: leftIcon ? "82%" : "100%" }}
-        >
-          {title}
-        </Typo>
-      )}
+      <View style={styles.iconContainer}>{leftIcon}</View>
+      <View style={styles.titleContainer}>
+        {title && (
+          <Typo size={22} fontWeight="600" style={styles.title}>
+            {title}
+          </Typo>
+        )}
+      </View>
+      <View style={styles.iconContainer}>{rightIcon}</View>
     </View>
   );
 };
@@ -28,8 +26,16 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
-  leftIcon: {
-    alignSelf: "flex-start",
+  iconContainer: {
+    flex: 1,
+  },
+  titleContainer: {
+    flex: 3,
+    alignItems: "center",
+  },
+  title: {
+    textAlign: "center",
   },
 });

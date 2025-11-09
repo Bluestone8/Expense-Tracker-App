@@ -1,6 +1,5 @@
 import { auth, firestore } from "@/config/firebase";
 import { AuthContextType, UserType } from "@/types";
-import { useRouter } from "expo-router";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -17,60 +16,44 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => ({ success: false }),
   updateUserData: async () => {},
   logout: async () => ({ success: false }),
+  isAuthenticated: false,
+  loading: true,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<UserType>(null);
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log("firebase user", firebaseUser);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          image: firebaseUser.photoURL,
-        });
-        updateUserData(firebaseUser.uid);
-        router.replace("/(tabs)");
+        await updateUserData(firebaseUser.uid);
       } else {
         setUser(null);
-        router.replace("/(auth)/welcome");
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      return { success: true, msg: "Login successful" };
-    } catch (error) {
-      console.error(error);
-      return { success: false, msg: "Failed to login" };
-    }
+    await signInWithEmailAndPassword(auth, email, password);
+    return { success: true, msg: "Login successful" };
   };
   const register = async (email: string, password: string, name: string) => {
-    try {
-      const response = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      await setDoc(doc(firestore, "users", response.user.uid), {
-        name,
-        email,
-        uid: response.user.uid,
-      });
-      return { success: true, msg: "Registration successful" };
-    } catch (error) {
-      console.error(error);
-      return { success: false, msg: "Failed to register" };
-    }
+    const response = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    await setDoc(doc(firestore, "users", response.user.uid), {
+      name,
+      email,
+      uid: response.user.uid,
+    });
+    return { success: true, msg: "Registration successful" };
   };
 
   const updateUserData = async (userId: string) => {
@@ -85,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           name: data?.name || null,
           image: data?.image || null,
         };
-        setUser({ ...userData });
+        setUser(userData);
       }
     } catch (error) {
       console.error(error);
@@ -93,13 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-      return { success: true };
-    } catch (error) {
-      console.error(error);
-      return { success: false, msg: "Failed to logout" };
-    }
+    await signOut(auth);
+    return { success: true };
   };
 
   const contextValue: AuthContextType = {
@@ -109,6 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     register,
     updateUserData,
     logout,
+    isAuthenticated: !!user,
+    loading,
   };
 
   return (

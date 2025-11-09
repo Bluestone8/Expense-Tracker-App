@@ -4,18 +4,15 @@ import Header from "@/components/Header";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
 import Typo from "@/components/Typo";
+import ImageUpload from "@/components/imageUpload";
 import { colors, spacingX, spacingY } from "@/constants/theme";
 import { useAuth } from "@/contexts/authContext";
-import { getProfileImage } from "@/services/imageService";
 import { updateUser } from "@/services/userService";
 import { UserDataType } from "@/types";
 import { verticalScale } from "@/utils/styling";
-import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import * as Icons from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 
 const ProfileModal = () => {
@@ -34,19 +31,6 @@ const ProfileModal = () => {
     image: null,
   });
   const [loading, setLoading] = useState(false);
-
-  const onPickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setUserData({ ...userData, image: result.assets[0].uri });
-    }
-  };
 
   const onSubmit = async () => {
     let { name } = userData;
@@ -80,20 +64,11 @@ const ProfileModal = () => {
         />
 
         <ScrollView contentContainerStyle={styles.form}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={getProfileImage(userData.image)}
-              style={styles.avatar}
-              contentFit="cover"
-              transition={100}
-            />
-            <TouchableOpacity onPress={onPickImage} style={styles.editIcon}>
-              <Icons.CameraPlus
-                size={verticalScale(20)}
-                color={colors.neutral800}
-              />
-            </TouchableOpacity>
-          </View>
+          <ImageUpload
+            file={userData.image}
+            onSelect={(file) => setUserData({ ...userData, image: file })}
+            onClear={() => setUserData({ ...userData, image: null })}
+          />
           <View style={styles.inputContainer}>
             <Typo color={colors.neutral200}>Name</Typo>
             <Input
@@ -140,32 +115,6 @@ const styles = StyleSheet.create({
   form: {
     gap: spacingY._30,
     marginTop: spacingY._15,
-  },
-  avatarContainer: {
-    position: "relative",
-    alignSelf: "center",
-  },
-  avatar: {
-    alignSelf: "center",
-    backgroundColor: colors.neutral300,
-    width: verticalScale(135),
-    height: verticalScale(135),
-    borderRadius: 200,
-    borderWidth: 1,
-    borderColor: colors.neutral500,
-  },
-  editIcon: {
-    position: "absolute",
-    bottom: spacingY._5,
-    right: spacingY._7,
-    borderRadius: 100,
-    backgroundColor: colors.neutral100,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
-    padding: spacingY._5,
   },
   inputContainer: {
     gap: spacingY._10,

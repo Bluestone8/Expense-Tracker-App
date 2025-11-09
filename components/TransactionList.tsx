@@ -1,28 +1,19 @@
 import Typo from "@/components/Typo";
-import { expenseCategories } from "@/constants/data";
-import { colors, radius, spacingX, spacingY } from "@/constants/theme";
-import {
-  TransactionItemProps,
-  TransactionListType,
-  TransactionType,
-} from "@/types";
-import { verticalScale } from "@/utils/styling";
+import { colors, spacingY } from "@/constants/theme";
+import { TransactionListType } from "@/types";
 import { FlashList } from "@shopify/flash-list";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { StyleSheet, View } from "react-native";
 import Loading from "./Loading";
+import TransactionItem from "./TransactionItem";
 
 const TransactionList = ({
   data,
   title,
   loading,
   emptyListMessage,
+  handleClick,
 }: TransactionListType) => {
-  const handleClick = (item: TransactionType) => {
-    console.log(item);
-  };
-
   return (
     <View style={styles.container}>
       {title && (
@@ -40,6 +31,7 @@ const TransactionList = ({
               handleClick={handleClick}
             />
           )}
+          estimatedItemSize={80}
         />
       </View>
       {!loading && data.length === 0 && (
@@ -52,51 +44,11 @@ const TransactionList = ({
         </Typo>
       )}
       {loading && (
-        <View style={{ top: verticalScale(100) }}>
+        <View style={{ marginTop: spacingY._15 }}>
           <Loading />
         </View>
       )}
     </View>
-  );
-};
-
-const TransactionItem = ({
-  item,
-  index,
-  handleClick,
-}: TransactionItemProps) => {
-  let category = expenseCategories["groceries"];
-  const IconComponent = category.icon;
-  return (
-    <Animated.View entering={FadeInDown.delay(index * 70)}>
-      <TouchableOpacity style={styles.row} onPress={() => handleClick(item)}>
-        <View style={[styles.icon, { backgroundColor: category.bgColor }]}>
-          {IconComponent && (
-            <IconComponent size={verticalScale(25)} color={colors.white} />
-          )}
-        </View>
-        <View style={styles.categoryDes}>
-          <Typo size={17} fontWeight="500">
-            {category.label}
-          </Typo>
-          <Typo
-            size={12}
-            color={colors.neutral400}
-            textProps={{ numberOfLines: 1 }}
-          >
-            bill item
-          </Typo>
-        </View>
-        <View style={styles.amountDate}>
-          <Typo fontWeight="500" color={colors.primary}>
-            +$23
-          </Typo>
-          <Typo size={13} color={colors.neutral400}>
-            12 Jan
-          </Typo>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
   );
 };
 
@@ -108,32 +60,5 @@ const styles = StyleSheet.create({
   },
   list: {
     minHeight: 3,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacingX._12,
-    marginBottom: spacingY._12,
-    backgroundColor: colors.neutral800,
-    padding: spacingY._10,
-    paddingHorizontal: spacingY._10,
-    borderRadius: radius._17,
-  },
-  icon: {
-    height: verticalScale(44),
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: radius._12,
-    borderCurve: "continuous",
-  },
-  categoryDes: {
-    flex: 1,
-    gap: 2.5,
-  },
-  amountDate: {
-    gap: 3,
-    alignItems: "flex-end",
   },
 });

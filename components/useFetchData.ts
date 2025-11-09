@@ -11,33 +11,41 @@ const useFetchData = <T>(
   collectionName: string,
   constraints: QueryConstraint[] = []
 ) => {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!collectionName) return;
+    if (!collectionName) {
+      setLoading(false);
+      return;
+    }
 
-    try {
-      const collectionRef = collection(firestore, collectionName);
-      const q = query(collectionRef, ...constraints);
+    const collectionRef = collection(firestore, collectionName);
+    const q = query(collectionRef, ...constraints);
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const fetchedData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetchedData = snapshot.docs.map(
+          (doc) =>
+            ({
+              id: doc.id,
+              ...doc.data(),
+            } as T)
+        );
         setData(fetchedData);
         setLoading(false);
         setError(null);
-      });
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    );
 
-      return () => unsubscribe();
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-  }, [collectionName, constraints]);
+    return () => unsubscribe();
+  }, [collectionName, ...constraints]);
 
   return { data, loading, error };
 };

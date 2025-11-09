@@ -6,7 +6,11 @@ import { CaretLeft } from "phosphor-react-native";
 import React from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
-const BackButton = ({ style, iconSize = 28 }: BackButtonProps) => {
+const BackButton = ({
+  style,
+  iconSize = 28,
+  color = colors.white,
+}: BackButtonProps) => {
   const router = useRouter();
   return (
     <TouchableOpacity
@@ -15,7 +19,7 @@ const BackButton = ({ style, iconSize = 28 }: BackButtonProps) => {
     >
       <CaretLeft
         size={verticalScale(iconSize)}
-        color={colors.white}
+        color={color}
         weight="bold"
       />
     </TouchableOpacity>
