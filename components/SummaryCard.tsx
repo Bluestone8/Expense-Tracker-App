@@ -32,5 +32,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: spacingY._5,
+    minHeight: 100, // Added minHeight to ensure consistent baseline
   },
 });

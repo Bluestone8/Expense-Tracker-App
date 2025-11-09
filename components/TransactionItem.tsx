@@ -41,6 +41,8 @@ const TransactionItem = ({
           <Typo
             fontWeight="500"
             color={item.type === "income" ? colors.success : colors.danger}
+            numberOfLines={1}
+            adjustsFontSizeToFit
           >
             {item.type === "income" ? "+" : "-"}$
             {item.amount.toFixed(2)}

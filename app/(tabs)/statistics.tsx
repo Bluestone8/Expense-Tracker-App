@@ -1,7 +1,6 @@
-import Header from "@/components/Header";
+import Card from "@/components/Card";
 import Loading from "@/components/Loading";
 import ScreenWrapper from "@/components/ScreenWrapper";
-import Section from "@/components/Section";
 import SummaryCard from "@/components/SummaryCard";
 import TransactionItem from "@/components/TransactionItem";
 import Typo from "@/components/Typo";
@@ -10,16 +9,10 @@ import { expenseCategories } from "@/constants/data";
 import { colors, radius, spacingY } from "@/constants/theme";
 import { useAuth } from "@/contexts/authContext";
 import { TransactionType, WalletType } from "@/types";
-import { where } from "firebase/firestore";
 import * as Haptics from "expo-haptics";
+import { where } from "firebase/firestore";
 import React, { useMemo, useState } from "react";
-import {
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { BarChart, PieChart } from "react-native-gifted-charts";
 
 type TimePeriod = "week" | "month" | "year";
@@ -33,8 +26,10 @@ const Statistics = () => {
       where("uid", "==", user?.uid),
     ]);
 
-  const { data: wallets, loading: walletsLoading } =
-    useFetchData<WalletType>("wallets", [where("uid", "==", user?.uid)]);
+  const { data: wallets, loading: walletsLoading } = useFetchData<WalletType>(
+    "wallets",
+    [where("uid", "==", user?.uid)]
+  );
 
   const {
     pieData,
@@ -42,46 +37,31 @@ const Statistics = () => {
     totalIncome,
     totalExpenses,
     totalBalance,
-    recentTransactions,
-    topSpendingCategories,
+    listData,
   } = useMemo(() => {
-    let totalIncome = 0;
-    let totalExpenses = 0;
-    let totalBalance = 0;
-    const categoryTotals: { [key: string]: number } = {};
-
-    wallets.forEach((wallet) => {
-      totalBalance += wallet.amount || 0;
-    });
-
-    const now = new Date();
-    const filteredTransactions = transactions.filter((t) => {
-      const transactionDate = new Date(t.date as any);
-      if (timePeriod === "week") {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return transactionDate > weekAgo;
-      } else if (timePeriod === "month") {
-        return transactionDate.getMonth() === now.getMonth();
-      } else if (timePeriod === "year") {
-        return transactionDate.getFullYear() === now.getFullYear();
-      }
-      return true;
-    });
-
-    filteredTransactions.forEach((transaction) => {
-      if (transaction.type === "income") {
-        totalIncome += transaction.amount;
-      } else {
-        totalExpenses += transaction.amount;
-        if (transaction.category) {
-          if (categoryTotals[transaction.category]) {
-            categoryTotals[transaction.category] += transaction.amount;
-          } else {
-            categoryTotals[transaction.category] = transaction.amount;
+    const { totalIncome, totalExpenses, categoryTotals } = transactions.reduce(
+      (acc, transaction) => {
+        if (transaction.type === "income") {
+          acc.totalIncome += transaction.amount;
+        } else {
+          acc.totalExpenses += transaction.amount;
+          if (transaction.category) {
+            if (acc.categoryTotals[transaction.category]) {
+              acc.categoryTotals[transaction.category] += transaction.amount;
+            } else {
+              acc.categoryTotals[transaction.category] = transaction.amount;
+            }
           }
         }
-      }
-    });
+        return acc;
+      },
+      { totalIncome: 0, totalExpenses: 0, categoryTotals: {} }
+    );
+
+    const totalBalance = wallets.reduce(
+      (acc, wallet) => acc + (wallet.amount || 0),
+      0
+    );
 
     const pieData = Object.keys(categoryTotals).map((category) => {
       const categoryData =
@@ -101,7 +81,9 @@ const Statistics = () => {
         label: "Income",
         frontColor: colors.success,
         topLabelComponent: () => (
-          <Typo color={colors.white}>${totalIncome.toFixed(2)}</Typo>
+          <Typo color={colors.white} fontWeight="600">
+            ${totalIncome.toFixed(2)}
+          </Typo>
         ),
       },
       {
@@ -109,15 +91,24 @@ const Statistics = () => {
         label: "Expenses",
         frontColor: colors.danger,
         topLabelComponent: () => (
-          <Typo color={colors.white}>${totalExpenses.toFixed(2)}</Typo>
+          <Typo color={colors.white} fontWeight="600">
+            ${totalExpenses.toFixed(2)}
+          </Typo>
         ),
       },
     ];
 
-    const recentTransactions = filteredTransactions.slice(0, 5);
+    const recentTransactions = transactions.slice(0, 5);
     const topSpendingCategories = pieData
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
+
+    const listData = [
+      { type: "header", title: "Top Spending Categories" },
+      ...topSpendingCategories.map((item) => ({ ...item, type: "category" })),
+      { type: "header", title: "Recent Transactions" },
+      ...recentTransactions.map((item) => ({ ...item, type: "transaction" })),
+    ];
 
     return {
       pieData,
@@ -125,23 +116,56 @@ const Statistics = () => {
       totalIncome,
       totalExpenses,
       totalBalance,
-      recentTransactions,
-      topSpendingCategories,
+      listData,
     };
   }, [transactions, wallets, timePeriod]);
 
   if (transactionsLoading || walletsLoading) {
     return (
       <ScreenWrapper>
-        <Header title="Statistics" />
         <Loading />
       </ScreenWrapper>
     );
   }
 
+  const renderItem = ({ item, index }: { item: any; index: number }) => {
+    if (item.type === "category") {
+      return (
+        <View style={styles.categoryItem}>
+          <View style={styles.categoryInfo}>
+            <item.icon size={30} color={item.color} />
+            <Typo size={18} fontWeight="600" style={{ marginLeft: 15 }}>
+              {item.text}
+            </Typo>
+          </View>
+          <View style={styles.categoryAmount}>
+            <Typo size={18} fontWeight="700">
+              ${item.value.toFixed(2)}
+            </Typo>
+          </View>
+        </View>
+      );
+    }
+
+    if (item.type === "transaction") {
+      return (
+        <TransactionItem item={item} index={index} handleClick={() => {}} />
+      );
+    }
+
+    if (item.type === "header") {
+      return (
+        <Typo size={22} fontWeight="700" style={styles.sectionTitle}>
+          {item.title}
+        </Typo>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <ScreenWrapper>
-      <Header title="Statistics" />
       <View style={styles.filterContainer}>
         {(["week", "month", "year"] as TimePeriod[]).map((period) => (
           <TouchableOpacity
@@ -156,6 +180,7 @@ const Statistics = () => {
             }}
           >
             <Typo
+              fontWeight="600"
               color={timePeriod === period ? colors.white : colors.neutral400}
             >
               {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -163,98 +188,88 @@ const Statistics = () => {
           </TouchableOpacity>
         ))}
       </View>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.summaryContainer}>
-          <SummaryCard
-            title="Total Balance"
-            value={`$${totalBalance.toFixed(2)}`}
-            color={colors.primary}
-          />
-          <SummaryCard
-            title="Income"
-            value={`$${totalIncome.toFixed(2)}`}
-            color={colors.success}
-          />
-          <SummaryCard
-            title="Expenses"
-            value={`$${totalExpenses.toFixed(2)}`}
-            color={colors.danger}
-          />
-        </View>
-        <Section title="Income vs Expenses">
-          <View style={styles.chartContainer}>
-            <BarChart
-              data={barData}
-              barWidth={50}
-              spacing={60}
-              initialSpacing={20}
-              yAxisThickness={0}
-              xAxisThickness={0}
-              hideRules
-              showYAxisIndices={false}
-              showXAxisIndices={false}
-            />
-          </View>
-        </Section>
-        <Section title="Expense Categories">
-          <View style={styles.chartContainer}>
-            {pieData.length > 0 ? (
-              <PieChart
-                data={pieData}
-                donut
-                innerRadius={80}
-                radius={150}
-                centerLabelComponent={() => (
-                  <View style={styles.centerLabel}>
-                    <Typo size={20} fontWeight="600">
-                      Total
-                    </Typo>
-                    <Typo size={18} fontWeight="500" color={colors.danger}>
-                      ${totalExpenses.toFixed(2)}
-                    </Typo>
-                  </View>
-                )}
+      <FlatList
+        data={listData}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
+        renderItem={renderItem}
+        contentContainerStyle={styles.container}
+        ListHeaderComponent={
+          <>
+            <View style={styles.summaryContainer}>
+              <SummaryCard
+                title="Total"
+                value={`$${totalBalance.toFixed(1)}`}
+                color={colors.primary}
               />
-            ) : (
-              <Typo>No data to display</Typo>
-            )}
-          </View>
-        </Section>
-        <Section title="Top Spending Categories">
-          <FlatList
-            data={topSpendingCategories}
-            keyExtractor={(item) => item.text}
-            renderItem={({ item }) => (
-              <View style={styles.categoryItem}>
-                <View style={styles.categoryInfo}>
-                  <item.icon size={24} color={item.color} />
-                  <Typo size={16} style={{ marginLeft: 10 }}>
-                    {item.text}
-                  </Typo>
-                </View>
-                <View style={styles.categoryAmount}>
-                  <Typo size={16} fontWeight="600">
-                    ${item.value.toFixed(2)}
-                  </Typo>
-                </View>
+              <SummaryCard
+                title="Income"
+                value={`$${totalIncome.toFixed(1)}`}
+                color={colors.success}
+              />
+              <SummaryCard
+                title="Expenses"
+                value={`$${totalExpenses.toFixed(1)}`}
+                color={colors.danger}
+              />
+            </View>
+            <Card>
+              <Typo size={22} fontWeight="700" style={styles.sectionTitle}>
+                Income vs Expenses
+              </Typo>
+              <View style={styles.chartContainer}>
+                <BarChart
+                  data={barData}
+                  barWidth={60}
+                  spacing={80}
+                  initialSpacing={20}
+                  yAxisThickness={0}
+                  xAxisThickness={0}
+                  hideRules
+                  showYAxisIndices={false}
+                  showXAxisIndices={false}
+                  barStyle={{
+                    borderTopLeftRadius: radius._10,
+                    borderTopRightRadius: radius._10,
+                  }}
+                  gradientColor={colors.white}
+                />
               </View>
-            )}
-          />
-        </Section>
-        <Section title="Recent Transactions">
-          <FlatList
-            data={recentTransactions}
-            keyExtractor={(item) => item.id!}
-            renderItem={({ item, index }) => (
-              <TransactionItem
-                item={item}
-                index={index}
-                handleClick={() => {}}
-              />
-            )}
-          />
-        </Section>
-      </ScrollView>
+            </Card>
+            <Card>
+              <Typo size={22} fontWeight="700" style={styles.sectionTitle}>
+                Expense Categories
+              </Typo>
+              <View style={styles.chartContainer}>
+                {pieData.length > 0 ? (
+                  <PieChart
+                    data={pieData}
+                    donut
+                    innerRadius={90}
+                    radius={160}
+                    centerLabelComponent={() => (
+                      <View style={styles.centerLabel}>
+                        <Typo size={22} fontWeight="700">
+                          Total
+                        </Typo>
+                        <Typo size={20} fontWeight="600" color={colors.danger}>
+                          ${totalExpenses.toFixed(2)}
+                        </Typo>
+                      </View>
+                    )}
+                    sectionAutoFocus
+                    focusOnPress
+                    onPress={(item) => console.log(item)}
+                    shadowColor={colors.neutral400}
+                    shadowWidth={2}
+                  />
+                ) : (
+                  <Typo>No data to display</Typo>
+                )}
+              </View>
+            </Card>
+          </>
+        }
+      />
     </ScreenWrapper>
   );
 };
@@ -270,20 +285,24 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral700,
   },
   filterButton: {
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   activeFilter: {
     backgroundColor: colors.primary,
-    borderRadius: radius._10,
+    borderRadius: radius._15,
   },
   summaryContainer: {
     flexDirection: "row",
-    gap: 10,
+    gap: 15,
+    marginBottom: spacingY._20,
+  },
+  sectionTitle: {
     marginBottom: spacingY._20,
   },
   chartContainer: {
@@ -297,10 +316,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginVertical: 10,
-    backgroundColor: colors.neutral800,
+    marginVertical: 15,
     padding: 15,
-    borderRadius: radius._10,
+    backgroundColor: colors.neutral700,
+    borderRadius: radius._15,
   },
   categoryInfo: {
     flexDirection: "row",
@@ -308,5 +327,10 @@ const styles = StyleSheet.create({
   },
   categoryAmount: {
     alignItems: "flex-end",
+  },
+  screenTitle: {
+    textAlign: "center",
+    marginTop: spacingY._20,
+    marginBottom: spacingY._20,
   },
 });
